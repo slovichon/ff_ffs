@@ -1,0 +1,56 @@
+.\" $Id$
+.\" Jared Yanovich
+.\" Released into the public domain, 2/12/2005.
+.Dd February 12, 2005
+.Dt FF_FFS 8
+.Os
+.Sh NAME
+.Nm ff_ffs
+.Nd list files on an FFS file system
+.Sh SYNOPSIS
+.Nm ff_ffs
+.Op Fl Ilsu
+.Op Fl a Ar n
+.Op Fl c Ar n
+.Op Fl i Ar list
+.Op Fl m Ar n
+.Op Fl n Ar file
+.Op Fl o Ar option
+.Bk -words
+.Op Fl p Ar prefix
+.Ek
+.Ar device ...
+.Sh DESCRIPTION
+The
+.Nm
+utility lists all files on the specified file systems.
+Options may be specifed to refine selection to files that match
+the specified criterion.
+It is usually invoked indirectly from
+.Xr ff 8 .
+.Pp
+The following options are supported:
+.Bl -tag -width Ds
+.It Fl a Ar n
+.It Fl c Ar n
+.It Fl I
+.It Fl i Ar list
+.It Fl l
+.It Fl m Ar n
+.It Fl n Ar file
+.It Fl o Ar option
+.It Fl s
+.It Fl u
+.El
+.Sh FILES
+.Bl -tag -width Pa
+.It Pa /etc/fstab
+file system default parameter list
+.El
+.Sh EXAMPLES
+
+.Sh SEE ALSO
+.Xr fstab 5 , 
+.Xr ff 8 ,
+.Xr mount_ffs 8 , 
+.Xr ncheck_ffs 8 
