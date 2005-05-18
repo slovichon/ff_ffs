@@ -1,7 +1,23 @@
 /* $Id$ */
 
-#include <util.h>
+#include <sys/param.h>
+#include <sys/queue.h>
+#include <sys/lock.h>
+#include <sys/stat.h>
+
+#include <ufs/ffs/fs.h>
+#include <ufs/ufs/quota.h>
+#include <ufs/ufs/inode.h>
+
+#include <err.h>
+#include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sysexits.h>
+#include <unistd.h>
+#include <util.h>
 
 #define PR_INO	(1<<0)
 #define PR_SIZ	(1<<1)
@@ -18,37 +34,41 @@ struct opt {
 	SLIST_ENTRY(opt)	 o_next;
 };
 
-SLIST_HEAD(inum)		 inolist;
-SLIST_HEAD(opt)			 optlist;
-int				 atime;
-int				 ctime;
-int				 mtime;
+__dead void			 usage(void);
+int				 ff(char *);
+
+SLIST_HEAD(, inum)		 inolist;
+SLIST_HEAD(, opt)		 optlist;
+int				 a_time;
+int				 c_time;
+int				 m_time;
 int				 mlist;
 int				 verify;
 int				 propts = PR_INO;
-struct timespec			_newer, *newer;
+struct timespec			 _newer, *newer;
 char				*prefix = ".";
 
 int
 main(int argc, char *argv[])
 {
 	const char *errstr;
-	struct inum inum;
+	struct inum *inum;
+	struct opt *opt;
 	char *s, *t, *p;
 	struct stat st;
-	int c;
+	int c, status;
 
 	SLIST_INIT(&inolist);
 	SLIST_INIT(&optlist);
-	while ((c = getopt(argc, argv, "a:c:Ii:lm:n:o:p:su")) == -1)
+	while ((c = getopt(argc, argv, "a:c:Ii:lm:n:o:p:su")) != -1)
 		switch (c) {
 		case 'a':
-			atime = strtonum(optarg, 0, INT_MAX, &errstr);
+			a_time = strtonum(optarg, 0, INT_MAX, &errstr);
 			if (errstr != NULL)
 				errx(EX_DATAERR, "%s: %s", optarg, errstr);
 			break;
 		case 'c':
-			ctime = strtonum(optarg, 0, INT_MAX, &errstr);
+			c_time = strtonum(optarg, 0, INT_MAX, &errstr);
 			if (errstr != NULL)
 				errx(EX_DATAERR, "%s: %s", optarg, errstr);
 			break;
@@ -72,7 +92,7 @@ main(int argc, char *argv[])
 			mlist = 1;
 			break;
 		case 'm':
-			mtime = strtonum(optarg, 0, INT_MAX, &errstr);
+			m_time = strtonum(optarg, 0, INT_MAX, &errstr);
 			if (errstr != NULL)
 				errx(EX_DATAERR, "%s: %s", optarg, errstr);
 			break;
@@ -89,7 +109,7 @@ main(int argc, char *argv[])
 				if ((opt = malloc(sizeof(*opt))) == NULL)
 					err(EX_OSERR, "malloc");
 				(void)memcpy(opt, 0, sizeof(*opt));
-				if ((p = strchr(s, "=")) == NULL || )
+				if ((p = strchr(s, '=')) == NULL)
 					errx(EX_DATAERR, "%s: invalid option", s);
 				*p++ = '\0';
 				opt->o_name = s;
@@ -111,21 +131,27 @@ main(int argc, char *argv[])
 			/* NOTREACHED */
 		}
 	argv += optind;
+	if (*argv == NULL)
+		usage();
 	status = 0;
 	while (*argv != NULL)
-		status |= ff(*argv);
+		status |= ff(*argv++);
 	exit(status ? EX_UNAVAILABLE : EX_OK);
 }
 
 int
 ff(char *dev)
 {
+	struct fs fs;
 	int fd;
 	
-	if ((fd = opendev(dev, O_RDONLY, 0, NULL)) == -1) {
+	if ((fd = opendev(dev, O_RDONLY, OPENDEV_PART, NULL)) == -1) {
 		warn("%s", dev);
 		return (1);
 	}
+	if (read(fd, &fs, sizeof(fs)) != sizeof(fs))
+		err(1, "read");
+	printf("optim: %d\nTIME: %d\nSPACE: %d\n", fs.fs_optim, FS_OPTTIME, FS_OPTSPACE);
 	(void)close(fd);
 	return (0);
 }
@@ -137,6 +163,6 @@ usage(void)
 
 	(void)fprintf(stderr,
 	    "usage: %s [-Ilsu] [-a n] [-c n] [-i list] [-m n] [-n file]\n"
-	    "          [-o option] [-p prefix] device ...\n", __progname);
+	    "\t[-o option] [-p prefix] device ...\n", __progname);
 	exit(EX_USAGE);
 }
